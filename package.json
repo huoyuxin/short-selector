@@ -1,6 +1,6 @@
 {
   "name": "short-selector",
-  "version": "0.5.6",
+  "version": "0.5.7",
   "description": "Given a DOM node, return a unique CSS selector matching only that element",
   "main": "./lib/index.js",
   "directories": {
@@ -13,13 +13,13 @@
     "watch": "npm-scripts-watcher"
   },
   "watch": {
-    "src/**/*.js": [
+    "lib/**/*.js": [
       "compile"
     ]
   },
   "repository": {
     "type": "git",
-    "url": "git://github.com/huoyuxin/unique-selector.git"
+    "url": "git://github.com/huoyuxin/short-selector.git"
   },
   "keywords": [
     "dom",
