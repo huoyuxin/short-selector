@@ -9,7 +9,7 @@
   "scripts": {
     "build": "tsc src/index.ts --outDir lib",
     "start": "tsc -w src/index.ts --outDir lib",
-    "prepare": "npm set registry https://registry.npmjs.org/; npm run build; npm version patch",
+    "ready": "npm set registry https://registry.npmjs.org/; npm run build; npm version patch; npm publish",
     "watch": "npm-scripts-watcher"
   },
   "watch": {
