@@ -10,6 +10,7 @@ import {getNthChild} from "./getNthChild";
 import {getTag} from "./getTag";
 import {isUnique} from "./isUnique";
 import {getParents} from "./getParents";
+import {optimizeSelector} from "./optimizeSelector";
 
 /**
  * Returns all the selectors of the elmenet
@@ -37,7 +38,7 @@ function getAllSelectors(el, selectors, attributesToIgnore) {
  * @param { String } Selectors
  * @return { Boolean }
  */
-function testUniqueness(element, selector) {
+function parentUnique(element, selector) {
   const {parentNode} = element;
   const elements = parentNode.querySelectorAll(selector);
   return elements.length === 1 && elements[0] === element;
@@ -50,7 +51,10 @@ function testUniqueness(element, selector) {
  * @return { String }
  */
 function getFirstUnique(element, selectors) {
-  return selectors.find(testUniqueness.bind(null, element));
+  const globalUnique = selectors.find((selector) =>
+    isUnique(element, selector)
+  );
+  return globalUnique || selectors.find(parentUnique.bind(null, element));
 }
 
 /**
@@ -87,7 +91,7 @@ function getUniqueCombination(element, items, tag) {
  * @return { String }
  */
 function getUniqueSelector(
-  element,
+  element: Element,
   selectorTypes,
   attributesToIgnore,
   excludeRegex
@@ -104,7 +108,7 @@ function getUniqueSelector(
     elementSelectors.ID = excludeRegex.test(elementSelectors.ID)
       ? null
       : elementSelectors.ID;
-    elementSelectors.Class = elementSelectors.Class.filter(
+    elementSelectors.Class = elementSelectors.Class?.filter(
       (className) => !excludeRegex.test(className)
     );
   }
@@ -113,13 +117,13 @@ function getUniqueSelector(
     const {ID, Tag, Class: Classes, Attributes, NthChild} = elementSelectors;
     switch (selectorType) {
       case "ID":
-        if (Boolean(ID) && testUniqueness(element, ID)) {
+        if (Boolean(ID) && parentUnique(element, ID)) {
           return ID;
         }
         break;
 
       case "Tag":
-        if (Boolean(Tag) && testUniqueness(element, Tag)) {
+        if (Boolean(Tag) && parentUnique(element, Tag)) {
           return Tag;
         }
         break;
@@ -148,7 +152,7 @@ function getUniqueSelector(
         }
     }
   }
-  return "*";
+  return null;
 }
 
 /**
@@ -159,41 +163,55 @@ function getUniqueSelector(
  * @api private
  */
 
+enum SelectorTypeEnum {
+  ID = "ID",
+  Class = "Class",
+  Tag = "Tag",
+  NthChild = "NthChild",
+}
+const AllSelectorTypes = Object.values(SelectorTypeEnum);
+
 export default function unique(
   el,
-  options?: {
-    selectorTypes: string[];
+  options: {
+    selectorTypes: SelectorTypeEnum[];
     attributesToIgnore: string[];
     excludeRegex: RegExp;
   }
 ) {
   const {
-    selectorTypes = ["ID", "Class", "Tag", "NthChild"],
+    selectorTypes = AllSelectorTypes,
     attributesToIgnore = ["id", "class", "length"],
     excludeRegex = null,
   } = options;
-  const allSelectors = [];
+
   const parents = getParents(el);
 
-  for (let elem of parents) {
-    const selector = getUniqueSelector(
-      elem,
-      selectorTypes,
-      attributesToIgnore,
-      excludeRegex
-    );
-    if (Boolean(selector)) {
-      allSelectors.push(selector);
-    }
-  }
+  for (let typeIndex = 0; typeIndex < selectorTypes.length; typeIndex++) {
+    // 优先级 >= 当前的 type
+    const types = selectorTypes.slice(0, typeIndex + 1);
+    const allSelectors: string[] = [];
+    console.log("types", types);
 
-  const selectors = [];
-  for (let it of allSelectors) {
-    selectors.unshift(it);
-    const selector = selectors.join(" > ");
-    if (isUnique(el, selector)) {
-      return selector;
+    // 对每一个优先级，计算一次
+    for (let i = 0; i < parents.length; i++) {
+      const el = parents[i];
+      const selector = getUniqueSelector(
+        el,
+        types,
+        attributesToIgnore,
+        excludeRegex
+      );
+      // 取不到目标元素上 parent 下唯一的选择器，直接返回
+      if (i === 0 && !selector) {
+        break;
+      }
+      allSelectors.unshift(selector);
     }
+
+    console.log("allSelectors", allSelectors);
+    const validSelector = optimizeSelector(el, allSelectors);
+    if (validSelector) return validSelector;
   }
 
   return null;

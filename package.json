@@ -3,13 +3,13 @@
   "version": "0.5.0",
   "description": "Given a DOM node, return a unique CSS selector matching only that element",
   "main": "./lib/index.js",
-  "jsnext:main": "./src/index.js",
   "directories": {
     "test": "test"
   },
   "scripts": {
-    "build": "tsc src/index.ts --outDir dist",
-    "start": "tsc -w src/index.ts --outDir dist",
+    "build": "tsc src/index.ts --outDir lib",
+    "start": "tsc -w src/index.ts --outDir lib",
+    "publish": "npm run build; npm",
     "watch": "npm-scripts-watcher"
   },
   "watch": {
@@ -28,29 +28,16 @@
     "selector",
     "event"
   ],
-  "author": "Eric Clemmons <eric@smarterspam.com>",
-  "contributors": [
-    {
-      "name": "Avraam Mavridis",
-      "email": "avr.mav@gmail.com"
-    }
-  ],
+  "author": "huoyuxin",
   "license": "MIT",
   "devDependencies": {
     "babel-cli": "^6.1.18",
     "babel-core": "^6.1.18",
     "babel-preset-latest": "^6.24.1",
     "babel-register": "^6.3.13",
-    "chai": "^3.5.0",
-    "component": "~0.10.1",
     "eslint": "^2.6.0",
     "eslint-config-airbnb": "^6.2.0",
     "eslint-config-airbnb-lite": "^1.0.4",
-    "eslint-plugin-react": "^4.2.3",
-    "jquery": "^2.2.3",
-    "jsdom": "^8.3.0",
-    "mocha": "~1.7.4",
-    "mocha-jsdom": "^1.1.0",
-    "mocha-phantomjs": "~1.1.1"
+    "eslint-plugin-react": "^4.2.3"
   }
 }
