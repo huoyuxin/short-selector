@@ -1,6 +1,6 @@
 {
   "name": "short-selector",
-  "version": "0.5.4",
+  "version": "0.5.5",
   "description": "Given a DOM node, return a unique CSS selector matching only that element",
   "main": "./lib/index.js",
   "directories": {
@@ -9,7 +9,7 @@
   "scripts": {
     "build": "tsc src/index.ts --outDir lib",
     "start": "tsc -w src/index.ts --outDir lib",
-    "publish": "npm set registry https://registry.npmjs.org/; npm run build; npm version patch; npm publish",
+    "prepare": "npm set registry https://registry.npmjs.org/; npm run build; npm version patch",
     "watch": "npm-scripts-watcher"
   },
   "watch": {
