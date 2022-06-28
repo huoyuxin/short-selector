@@ -17,11 +17,11 @@ import {getSelector, optimizeSelector} from "./optimizeSelector";
  * @param  { Object } element
  * @return { Object }
  */
-function getAllSelectors(el, selectors, attributesToIgnore) {
+function getAllSelectors(el, selectors, attributes) {
   const funcs = {
     Tag: getTag,
     NthChild: getNthChild,
-    Attributes: (elem) => getAttributes(elem, attributesToIgnore),
+    Attributes: (elem) => getAttributes(elem, attributes),
     Class: getClassSelectors,
     ID: getID,
   };
@@ -116,16 +116,12 @@ function getUniqueSelector(
   parentSelectors: string[],
   element: Element,
   selectorTypes,
-  attributesToIgnore,
+  attributes,
   excludeRegex
 ) {
   let foundSelector;
 
-  const elementSelectors = getAllSelectors(
-    element,
-    selectorTypes,
-    attributesToIgnore
-  );
+  const elementSelectors = getAllSelectors(element, selectorTypes, attributes);
 
   if (excludeRegex && excludeRegex instanceof RegExp) {
     elementSelectors.ID = excludeRegex.test(elementSelectors.ID)
@@ -176,13 +172,13 @@ export default function unique(
   el,
   options: {
     selectorTypes: SelectorTypeEnum[];
-    attributesToIgnore: string[];
+    attributes: string[];
     excludeRegex: RegExp;
   }
 ) {
   const {
     selectorTypes = AllSelectorTypes,
-    attributesToIgnore = ["id", "class", "length"],
+    attributes = [],
     excludeRegex = null,
   } = options;
 
@@ -201,7 +197,7 @@ export default function unique(
         allSelectors,
         el,
         types,
-        attributesToIgnore,
+        attributes,
         excludeRegex
       );
       // 取不到目标元素上 parent 下唯一的选择器，直接返回

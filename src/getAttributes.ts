@@ -4,17 +4,13 @@
  * @param  { Array } array of attributes to ignore
  * @return { Array }
  */
-export function getAttributes( el, attributesToIgnore = ['id', 'class', 'length'] )
-{
-  const { attributes } = el;
-  const attrs = [ ...attributes ];
+export function getAttributes(el: Element, attributesToRecord: string[] = []) {
+  const {attributes} = el;
 
-  return attrs.reduce( ( sum, next ) =>
-  {
-    if ( ! ( attributesToIgnore.indexOf( next.nodeName ) > -1 ) )
-    {
-      sum.push( `[${next.nodeName}="${next.value}"]` );
+  return Array.from(attributes).reduce((sum: string[], next: Attr) => {
+    if (attributesToRecord.includes(next.nodeName)) {
+      sum.push(`[${next.nodeName}="${next.value}"]`);
     }
     return sum;
-  }, [] );
+  }, []);
 }
