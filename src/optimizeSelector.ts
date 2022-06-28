@@ -19,10 +19,6 @@ const checkSelector = (
   // 去掉当前 selector
   selectors[index] = null;
   const selectorStr = getSelector(selectors);
-  console.log(
-    `test remove ${index} --- ${necessary[index]} --- ${selectorStr}`
-  );
-  console.log("still unique", isUnique(el, selectorStr));
   // 依然唯一定位该元素
   if (isUnique(el, selectorStr)) {
     necessary[index] = null;
@@ -37,7 +33,6 @@ export const optimizeSelector = (
     return null;
   }
 
-  console.log("[before] allSelectors", allSelectors);
   const necessary = [...allSelectors];
 
   // 1. 去掉 优先级低的 tag\nth
@@ -48,7 +43,6 @@ export const optimizeSelector = (
     checkSelector(el, necessary, index);
   });
 
-  console.log("[after1] necessary", necessary);
   // 2. 去掉 优先级高的 class\id
   necessary.forEach((selector, index) => {
     if (!selector) {
@@ -57,6 +51,5 @@ export const optimizeSelector = (
     checkSelector(el, necessary, index);
   });
 
-  console.log("[after2] necessary", necessary);
   return getSelector(necessary);
 };

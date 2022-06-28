@@ -68,7 +68,6 @@ function getUniqueCombination(
   tag = "",
   nth = ""
 ) {
-  console.log(`getUniqueCombination: ${id}, ${selectors}, ${tag}, ${nth}`);
   // 0. id
   // 1. class combine
   const selectorItems = getCombinations(selectors, 3);
@@ -97,8 +96,6 @@ function getUniqueCombination(
     ...tagNths,
     ...tagNthSelectors,
   ];
-
-  console.log("allSelectorItems", allSelectorItems);
 
   const firstUnique = getFirstUnique(
     parentSelectors,
@@ -196,7 +193,6 @@ export default function unique(
     // 优先级 >= 当前的 type
     const types = selectorTypes.slice(0, typeIndex + 1);
     const allSelectors: string[] = [];
-    console.log("types", types);
 
     // 循环顺序：父 -> 子
     for (let i = parents.length - 1; i >= 0; i--) {
@@ -215,7 +211,6 @@ export default function unique(
       allSelectors.push(selector);
     }
 
-    console.log("allSelectors", allSelectors);
     const validSelector = optimizeSelector(el, allSelectors);
     if (validSelector) return validSelector;
   }
