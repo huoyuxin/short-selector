@@ -17,7 +17,7 @@ import {getSelector, optimizeSelector} from "./optimizeSelector";
  * @param  { Object } element
  * @return { Object }
  */
-function getAllSelectors(el, selectors, attributes) {
+function getAllValidSelectors(el, selectors, attributes, excludeRegex) {
   const funcs = {
     Tag: getTag,
     NthChild: getNthChild,
@@ -26,10 +26,21 @@ function getAllSelectors(el, selectors, attributes) {
     ID: getID,
   };
 
-  return selectors.reduce((res, next) => {
+  const elementSelectors = selectors.reduce((res, next) => {
     res[next] = funcs[next](el);
     return res;
   }, {});
+
+  if (excludeRegex && excludeRegex instanceof RegExp) {
+    elementSelectors.ID = excludeRegex.test(elementSelectors.ID)
+      ? null
+      : elementSelectors.ID;
+    elementSelectors.Class = elementSelectors.Class?.filter(
+      (className) => !excludeRegex.test(className)
+    );
+  }
+
+  return elementSelectors;
 }
 
 /**
@@ -59,15 +70,13 @@ function getFirstUnique(parentSelectors: string[], element, selectors) {
  * @param  { String } tag
  * @return { String }
  */
-function getUniqueCombination(
-  parentSelectors: string[],
-  element: Element,
+function getSelectorItems(
   id = "",
   // class arr / attr arr
   selectors: string[] = [],
   tag = "",
   nth = ""
-) {
+): string[] {
   // 0. id
   // 1. class combine
   const selectorItems = getCombinations(selectors, 3);
@@ -87,7 +96,7 @@ function getUniqueCombination(
   const tagNthSelectors =
     tag && nth ? selectorItems.map((selector) => tag + selector + nth) : [];
 
-  const allSelectorItems = [
+  return [
     id,
     ...selectorItems,
     ...tags,
@@ -96,14 +105,36 @@ function getUniqueCombination(
     ...tagNths,
     ...tagNthSelectors,
   ];
+}
 
-  const firstUnique = getFirstUnique(
-    parentSelectors,
+function getValidCombination(
+  element: Element,
+  selectorTypes,
+  attributes,
+  excludeRegex
+) {
+  const elementSelectors = getAllValidSelectors(
     element,
-    allSelectorItems
+    selectorTypes,
+    attributes,
+    excludeRegex
   );
 
-  return firstUnique || null;
+  const {
+    ID = "",
+    Class = [],
+    Tag = "",
+    Attributes = [],
+    NthChild = "",
+  } = elementSelectors;
+
+  const allSelectorItems = getSelectorItems(
+    ID,
+    [...Class, ...Attributes],
+    Tag,
+    NthChild
+  );
+  return allSelectorItems;
 }
 
 /**
@@ -119,36 +150,19 @@ function getUniqueSelector(
   attributes,
   excludeRegex
 ) {
-  let foundSelector;
-
-  const elementSelectors = getAllSelectors(element, selectorTypes, attributes);
-
-  if (excludeRegex && excludeRegex instanceof RegExp) {
-    elementSelectors.ID = excludeRegex.test(elementSelectors.ID)
-      ? null
-      : elementSelectors.ID;
-    elementSelectors.Class = elementSelectors.Class?.filter(
-      (className) => !excludeRegex.test(className)
-    );
-  }
-
-  const {
-    ID = "",
-    Class: Classes = [],
-    Tag = "",
-    Attributes = [],
-    NthChild = "",
-  } = elementSelectors;
-
-  foundSelector = getUniqueCombination(
+  const allSelectorItems = getValidCombination(
+    element,
+    selectorTypes,
+    attributes,
+    excludeRegex
+  );
+  const firstUnique = getFirstUnique(
     parentSelectors,
     element,
-    ID,
-    [...Classes, ...Attributes],
-    Tag,
-    NthChild
+    allSelectorItems
   );
-  return foundSelector || null;
+
+  return firstUnique || null;
 }
 
 /**
@@ -166,16 +180,19 @@ enum SelectorTypeEnum {
   Tag = "Tag",
   NthChild = "NthChild",
 }
-const AllSelectorTypes = Object.values(SelectorTypeEnum);
+interface Option {
+  selectorTypes: SelectorTypeEnum[];
+  attributes: string[];
+  excludeRegex?: RegExp;
+}
 
-export default function unique(
-  el,
-  options: {
-    selectorTypes: SelectorTypeEnum[];
-    attributes: string[];
-    excludeRegex: RegExp;
-  }
-) {
+const AllSelectorTypes = Object.values(SelectorTypeEnum);
+const DefaultOption = {
+  selectorTypes: AllSelectorTypes,
+  attributes: [],
+};
+
+function unique(el, options: Option) {
   const {
     selectorTypes = AllSelectorTypes,
     attributes = [],
@@ -207,9 +224,77 @@ export default function unique(
       allSelectors.push(selector);
     }
 
-    const validSelector = optimizeSelector(el, allSelectors);
+    if (isUnique(el, getSelector(allSelectors))) {
+      return allSelectors;
+    }
+  }
+
+  return [];
+}
+
+// 计算二维数组中公共元素
+function getCommonItem(arr: string[][] = []) {
+  const commonArr = (arr[0] || []).map((item, index) => {
+    return arr.every((arr) => arr[index] === item) ? item : null;
+  });
+
+  return commonArr;
+}
+
+export function commonShort(elArr: Element[], options: Option = DefaultOption) {
+  // console.log("elArr", elArr);
+  const selectorsArr = elArr.map((el) => unique(el, options));
+  // console.log("selectorsArr", selectorsArr);
+
+  const commonSelectors = getCommonItem(selectorsArr);
+  // console.log("commonSelectors", commonSelectors);
+
+  // 若最后一个是空，计算目标元素公共选择器
+  if (!commonSelectors[commonSelectors.length - 1]) {
+    const {
+      selectorTypes = AllSelectorTypes,
+      attributes = [],
+      excludeRegex = null,
+    } = options;
+    const combinationsArr = elArr.map((el) =>
+      getValidCombination(el, selectorTypes, attributes, excludeRegex)
+    );
+    const commonCombinations = getCommonItem(combinationsArr).filter(
+      (item) => item
+    );
+    // console.log("commonCombinations", commonCombinations);
+    commonSelectors[commonSelectors.length - 1] = commonCombinations[0];
+  }
+
+  // common 选择器匹配的元素
+  const relatedEls = Array.from(
+    document.querySelectorAll(getSelector(commonSelectors))
+  );
+  // console.log("relatedEls", relatedEls);
+
+  // 包含所有 els
+  if (elArr.every((el) => relatedEls.includes(el))) {
+    // 优化选择器
+    const validSelector = optimizeSelector(relatedEls, commonSelectors);
     if (validSelector) return validSelector;
   }
+
+  return null;
+}
+
+export default function uniqueShort(
+  el: Element,
+  options: Option = DefaultOption
+) {
+  // todo: options
+  // todo: options
+  // todo: options
+  // todo: options
+  // todo: options
+  const allSelectors = unique(el, options);
+
+  const validSelector = optimizeSelector([el], allSelectors);
+  if (validSelector) return validSelector;
 
   return null;
 }

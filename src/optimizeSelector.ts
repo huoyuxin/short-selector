@@ -1,4 +1,4 @@
-import {isUnique} from "./isUnique";
+import {isSame} from "./isUnique";
 
 export const getSelector = (selectors: (string | null)[]) =>
   selectors
@@ -11,7 +11,7 @@ export const getSelector = (selectors: (string | null)[]) =>
     .replace(/( > ){2,}/g, " ");
 
 const checkSelector = (
-  el: Element,
+  els: Element[],
   necessary: (string | null)[],
   index: number
 ) => {
@@ -20,19 +20,15 @@ const checkSelector = (
   selectors[index] = null;
   const selectorStr = getSelector(selectors);
   // 依然唯一定位该元素
-  if (isUnique(el, selectorStr)) {
+  if (isSame(els, selectorStr)) {
     necessary[index] = null;
   }
 };
 
 export const optimizeSelector = (
-  el: Element,
+  els: Element[],
   allSelectors: (string | null)[]
 ) => {
-  if (!isUnique(el, getSelector(allSelectors))) {
-    return null;
-  }
-
   const necessary = [...allSelectors];
 
   // 1. 去掉 优先级低的 tag\nth
@@ -40,7 +36,7 @@ export const optimizeSelector = (
     if (!selector || selector.match(/[#.=]/)) {
       return;
     }
-    checkSelector(el, necessary, index);
+    checkSelector(els, necessary, index);
   });
 
   // 2. 去掉 优先级高的 class\id
@@ -48,7 +44,7 @@ export const optimizeSelector = (
     if (!selector) {
       return;
     }
-    checkSelector(el, necessary, index);
+    checkSelector(els, necessary, index);
   });
 
   return getSelector(necessary);
