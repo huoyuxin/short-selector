@@ -267,9 +267,9 @@ export function commonShort(elArr: Element[], options: Option = DefaultOption) {
   }
 
   // common 选择器匹配的元素
-  const relatedEls = Array.from(
-    document.querySelectorAll(getSelector(commonSelectors))
-  );
+  const relatedEls = commonSelectors
+    ? Array.from(document.querySelectorAll(getSelector(commonSelectors)))
+    : [];
   // console.log("relatedEls", relatedEls);
 
   // 包含所有 els
