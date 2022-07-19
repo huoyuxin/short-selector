@@ -266,8 +266,9 @@ export function commonShort(elArr: Element[], options: Option = DefaultOption) {
     commonSelectors[commonSelectors.length - 1] = commonCombinations[0];
   }
 
+  const validSelectors = commonSelectors.filter((selector) => selector);
   // common 选择器匹配的元素
-  const relatedEls = commonSelectors
+  const relatedEls = validSelectors.length
     ? Array.from(document.querySelectorAll(getSelector(commonSelectors)))
     : [];
   // console.log("relatedEls", relatedEls);
