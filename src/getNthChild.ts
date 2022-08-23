@@ -9,15 +9,15 @@ export function getNthChild(element: Element) {
   const {parentNode} = element;
 
   if (parentNode) {
-    const {childNodes} = parentNode;
+    const {children} = parentNode;
     const index = Array.prototype.findIndex.call(
-      childNodes,
+      children,
       (node) => node === element
     );
     if (index > -1) {
       return index === 0
         ? `:first-child`
-        : index === childNodes.length - 1
+        : index === children.length - 1
         ? `:last-child`
         : `:nth-child(${index + 1})`;
     }
