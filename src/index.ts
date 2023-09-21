@@ -2,22 +2,23 @@
  * Expose `unique`
  */
 
-import {getID} from "./getID";
-import {getClassSelectors} from "./getClasses";
-import {getCombinations} from "./getCombinations";
-import {getAttributes} from "./getAttributes";
-import {getNthChild} from "./getNthChild";
-import {getTag} from "./getTag";
-import {isUnique} from "./isUnique";
-import {getParents} from "./getParents";
-import {getSelector, optimizeSelector} from "./optimizeSelector";
+import { flatten, flattenDeep } from "lodash";
+import { getID } from "./getID";
+import { getClassSelectors } from "./getClasses";
+import { combineObjList, getCombinations } from "./getCombinations";
+import { getAttributes } from "./getAttributes";
+import { getNthChild } from "./getNthChild";
+import { getTag } from "./getTag";
+import { isUnique } from "./isUnique";
+import { getParents } from "./getParents";
+import { getSelector, optimizeSelector } from "./optimizeSelector";
 
 /**
  * Returns all the selectors of the elmenet
  * @param  { Object } element
  * @return { Object }
  */
-function getAllValidSelectors(el, selectors, attributes, excludeRegex) {
+function getAllValidSelectors(el, selectorTypes, attributes) {
   const funcs = {
     Tag: getTag,
     NthChild: getNthChild,
@@ -26,19 +27,10 @@ function getAllValidSelectors(el, selectors, attributes, excludeRegex) {
     ID: getID,
   };
 
-  const elementSelectors = selectors.reduce((res, next) => {
+  const elementSelectors = selectorTypes.reduce((res, next) => {
     res[next] = funcs[next](el);
     return res;
   }, {});
-
-  if (excludeRegex && excludeRegex instanceof RegExp) {
-    elementSelectors.ID = excludeRegex.test(elementSelectors.ID)
-      ? null
-      : elementSelectors.ID;
-    elementSelectors.Class = elementSelectors.Class?.filter(
-      (className) => !excludeRegex.test(className)
-    );
-  }
 
   return elementSelectors;
 }
@@ -51,15 +43,11 @@ function getAllValidSelectors(el, selectors, attributes, excludeRegex) {
  */
 function getFirstUnique(parentSelectors: string[], element, selectors) {
   const notEmpty = selectors.filter((selector) => selector);
-  const soloUnique = notEmpty.find((selector) =>
-    isUnique(element, getSelector([selector]))
-  );
+  const soloUnique = notEmpty.find((selector) => isUnique(element, getSelector([selector])));
   if (soloUnique) {
     return soloUnique;
   }
-  const combineUnique = notEmpty.find((selector) =>
-    isUnique(element, getSelector([...parentSelectors, selector]))
-  );
+  const combineUnique = notEmpty.find((selector) => isUnique(element, getSelector([...parentSelectors, selector])));
   return combineUnique;
 }
 
@@ -71,69 +59,84 @@ function getFirstUnique(parentSelectors: string[], element, selectors) {
  * @return { String }
  */
 function getSelectorItems(
+  selectorTypes: SelectorTypeEnum[],
+  excludeRegex,
   id = "",
-  // class arr / attr arr
-  selectors: string[] = [],
+  classSelectorArr: string[] = [],
+  attrSelectorArr: string[] = [],
   tag = "",
   nth = ""
 ): string[] {
-  // 0. id
-  // 1. class combine
-  const selectorItems = getCombinations(selectors, 3);
-  // 2. tag
-  const tags = tag ? [tag] : [];
-  // 3. tag + class
-  const tagSelectors = tag
-    ? selectorItems.map((selector) => tag + selector)
-    : [];
-  // 4. class + nth
-  const nthSelectors = nth
-    ? selectorItems.map((selector) => selector + nth)
-    : [];
-  // 5. tag + nth
-  const tagNths = tag && nth ? [tag + nth] : [];
-  // 6. tag + class + nth
-  const tagNthSelectors =
-    tag && nth ? selectorItems.map((selector) => tag + selector + nth) : [];
+  const priorityMap = {};
+  Object.values(SelectorTypeEnum).forEach((value) => {
+    priorityMap[value] = selectorTypes.indexOf(value) + 1;
+  });
+  // 1. tag 放最前
+  const tagObj = {
+    selectors: tag ? [tag] : [],
+    type: SelectorTypeEnum.Tag,
+  };
+  // 2. id
+  const idObj = {
+    selectors: id ? [id] : [],
+    type: SelectorTypeEnum.ID,
+  };
+  // 3. class
+  const classSelectors = getCombinations(classSelectorArr, 1, 3, (arr) => arr.join(""));
+  const classObj = {
+    selectors: classSelectors,
+    type: SelectorTypeEnum.Class,
+  };
+  // 4. attribute
+  const attrSelectors = getCombinations(attrSelectorArr, 1, 3, (arr) => arr.join(""));
+  const attrObj = {
+    selectors: attrSelectors,
+    type: SelectorTypeEnum.Attributes,
+  };
+  // 5. nth-child 放最后
+  const nthSelectors = nth ? [nth] : [];
+  const nthObj = {
+    selectors: nthSelectors,
+    type: SelectorTypeEnum.NthChild,
+  };
+  // todo: 测试传参不全的情况
+  const selectorObjList = [tagObj, idObj, classObj, attrObj, nthObj];
 
-  return [
-    id,
-    ...selectorItems,
-    ...tags,
-    ...tagSelectors,
-    ...nthSelectors,
-    ...tagNths,
-    ...tagNthSelectors,
-  ];
+  const filteredObjArr = selectorObjList
+    .map((obj) => ({
+      type: obj.type,
+      selectors: obj.selectors.filter((selector) => {
+        if (!selector) return false;
+        if (excludeRegex && excludeRegex instanceof RegExp) return !selector.match(excludeRegex);
+        return true;
+      }),
+    }))
+    .filter((obj) => obj.selectors.length);
+
+  const selectorCombinedArr = new Array(filteredObjArr.length).fill(1).map((c, i) =>
+    getCombinations(filteredObjArr, i + 1, i + 1, (selectorObjList) => {
+      const selectors = combineObjList(selectorObjList);
+      const priority = selectorObjList.reduce((p, c) => p + priorityMap[c.type], 0) / selectorObjList.length;
+      const types = selectorObjList.map((obj) => obj.type);
+      return {
+        selectors,
+        types,
+        priority,
+      };
+    })
+  );
+  const selectorCombined = flatten(selectorCombinedArr);
+  // 根据优先级排序
+  const sortedObj = selectorCombined.sort((a, b) => a.priority - b.priority);
+  console.log("[short selector]", "sortedObj", sortedObj);
+  const sortedSelectors = flattenDeep(sortedObj.map((obj) => obj.selectors));
+  return sortedSelectors;
 }
 
-function getValidCombination(
-  element: Element,
-  selectorTypes,
-  attributes,
-  excludeRegex
-) {
-  const elementSelectors = getAllValidSelectors(
-    element,
-    selectorTypes,
-    attributes,
-    excludeRegex
-  );
-
-  const {
-    ID = "",
-    Class = [],
-    Tag = "",
-    Attributes = [],
-    NthChild = "",
-  } = elementSelectors;
-
-  const allSelectorItems = getSelectorItems(
-    ID,
-    [...Class, ...Attributes],
-    Tag,
-    NthChild
-  );
+function getValidCombination(element: Element, selectorTypes, attributes, excludeRegex) {
+  const elementSelectors = getAllValidSelectors(element, selectorTypes, attributes);
+  const { ID = "", Class = [], Tag = "", Attributes = [], NthChild = "" } = elementSelectors;
+  const allSelectorItems = getSelectorItems(selectorTypes, excludeRegex, ID, Class, Attributes, Tag, NthChild);
   return allSelectorItems;
 }
 
@@ -143,24 +146,9 @@ function getValidCombination(
  * @param  { Array } options
  * @return { String }
  */
-function getUniqueSelector(
-  parentSelectors: string[],
-  element: Element,
-  selectorTypes,
-  attributes,
-  excludeRegex
-) {
-  const allSelectorItems = getValidCombination(
-    element,
-    selectorTypes,
-    attributes,
-    excludeRegex
-  );
-  const firstUnique = getFirstUnique(
-    parentSelectors,
-    element,
-    allSelectorItems
-  );
+function getUniqueSelector(parentSelectors: string[], element: Element, selectorTypes, attributes, excludeRegex) {
+  const allSelectorItems = getValidCombination(element, selectorTypes, attributes, excludeRegex);
+  const firstUnique = getFirstUnique(parentSelectors, element, allSelectorItems);
 
   return firstUnique || null;
 }
@@ -181,6 +169,7 @@ enum SelectorTypeEnum {
   NthChild = "NthChild",
 }
 interface Option {
+  // 按优先级顺序传
   selectorTypes: SelectorTypeEnum[];
   attributes: string[];
   excludeRegex?: RegExp;
@@ -193,42 +182,28 @@ const DefaultOption = {
 };
 
 function unique(el, options: Option) {
-  const {
-    selectorTypes = AllSelectorTypes,
-    attributes = [],
-    excludeRegex = null,
-  } = options;
+  const { selectorTypes = AllSelectorTypes, attributes = [], excludeRegex = null } = options;
 
   const parents = getParents(el);
 
-  for (let typeIndex = 0; typeIndex < selectorTypes.length; typeIndex++) {
-    // 对每一个优先级，计算一次
-    // 优先级 >= 当前的 type
-    const types = selectorTypes.slice(0, typeIndex + 1);
-    const allSelectors: string[] = [];
+  const types = selectorTypes;
+  const allSelectors: string[] = [];
 
-    // 循环顺序：父 -> 子
-    for (let i = parents.length - 1; i >= 0; i--) {
-      const el = parents[i];
-      const selector = getUniqueSelector(
-        allSelectors,
-        el,
-        types,
-        attributes,
-        excludeRegex
-      );
-      // 取不到目标元素上 parent 下唯一的选择器，直接返回
-      if (i === parents.length - 1 && !selector) {
-        break;
-      }
-      allSelectors.push(selector);
+  // 循环顺序：父 -> 子
+  for (let i = parents.length - 1; i >= 0; i--) {
+    const el = parents[i];
+    console.log("[short selector]", "el", el);
+    const selector = getUniqueSelector(allSelectors, el, types, attributes, excludeRegex);
+    // 取不到目标元素上 parent 下唯一的选择器，直接返回
+    if (i === parents.length - 1 && !selector) {
+      break;
     }
-
-    if (isUnique(el, getSelector(allSelectors))) {
-      return allSelectors;
-    }
+    allSelectors.push(selector);
   }
 
+  if (isUnique(el, getSelector(allSelectors))) {
+    return allSelectors;
+  }
   return [];
 }
 
@@ -242,36 +217,21 @@ function getCommonItem(arr: string[][] = []) {
 }
 
 export function commonShort(elArr: Element[], options: Option = DefaultOption) {
-  // console.log("elArr", elArr);
   const selectorsArr = elArr.map((el) => unique(el, options));
-  // console.log("selectorsArr", selectorsArr);
 
   const commonSelectors = getCommonItem(selectorsArr);
-  // console.log("commonSelectors", commonSelectors);
 
   // 若最后一个是空，计算目标元素公共选择器
   if (!commonSelectors[commonSelectors.length - 1]) {
-    const {
-      selectorTypes = AllSelectorTypes,
-      attributes = [],
-      excludeRegex = null,
-    } = options;
-    const combinationsArr = elArr.map((el) =>
-      getValidCombination(el, selectorTypes, attributes, excludeRegex)
-    );
-    const commonCombinations = getCommonItem(combinationsArr).filter(
-      (item) => item
-    );
-    // console.log("commonCombinations", commonCombinations);
+    const { selectorTypes = AllSelectorTypes, attributes = [], excludeRegex = null } = options;
+    const combinationsArr = elArr.map((el) => getValidCombination(el, selectorTypes, attributes, excludeRegex));
+    const commonCombinations = getCommonItem(combinationsArr).filter((item) => item);
     commonSelectors[commonSelectors.length - 1] = commonCombinations[0];
   }
 
   const validSelectors = commonSelectors.filter((selector) => selector);
   // common 选择器匹配的元素
-  const relatedEls = validSelectors.length
-    ? Array.from(document.querySelectorAll(getSelector(commonSelectors)))
-    : [];
-  // console.log("relatedEls", relatedEls);
+  const relatedEls = validSelectors.length ? Array.from(document.querySelectorAll(getSelector(commonSelectors))) : [];
 
   // 包含所有 els
   if (elArr.every((el) => relatedEls.includes(el))) {
@@ -283,15 +243,7 @@ export function commonShort(elArr: Element[], options: Option = DefaultOption) {
   return null;
 }
 
-export default function uniqueShort(
-  el: Element,
-  options: Option = DefaultOption
-) {
-  // todo: options
-  // todo: options
-  // todo: options
-  // todo: options
-  // todo: options
+export default function uniqueShort(el: Element, options: Option = DefaultOption) {
   const allSelectors = unique(el, options);
 
   const validSelector = optimizeSelector([el], allSelectors);

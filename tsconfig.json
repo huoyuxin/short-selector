@@ -1,19 +1,17 @@
 {
   "compilerOptions": {
-    "allowSyntheticDefaultImports": true,
-    "esModuleInterop": true,
-    "jsx": "react",
-    "resolveJsonModule": true,
-    "lib": ["dom", "es2019"],
-    "module": "ESNext",
+    "skipLibCheck": true,
+    "module": "es6",
+    "target": "es5",
+    "sourceMap": false,
     "moduleResolution": "node",
-    "noImplicitReturns": true,
-    "noUnusedLocals": true,
-    "strict": true,
-    "target": "es2018",
+    "esModuleInterop": true,
+    "lib": ["dom", "ESNext"],
     "baseUrl": ".",
     "paths": {
       "@/*": ["src/*"]
-    }
-  }
+    },
+    "outDir": "lib"
+  },
+  "include": ["src/index.ts"]
 }

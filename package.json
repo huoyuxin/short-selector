@@ -10,10 +10,9 @@
     "test": "test"
   },
   "scripts": {
-    "build": "tsc src/index.ts --outDir lib",
-    "start": "tsc -w src/index.ts --outDir lib",
-    "ready": "npm set registry https://registry.npmjs.org/; npm run build; npm version patch; npm publish",
-    "watch": "npm-scripts-watcher"
+    "build": "tsc --build tsconfig.json",
+    "start": "tsc --build ./tsconfig.json -w",
+    "ready": "npm set registry https://registry.npmjs.org/; npm run build; npm version patch; npm publish"
   },
   "repository": {
     "type": "git",
@@ -37,5 +36,9 @@
     "eslint-config-airbnb": "^6.2.0",
     "eslint-config-airbnb-lite": "^1.0.4",
     "eslint-plugin-react": "^4.2.3"
+  },
+  "dependencies": {
+    "lodash": "^4.17.21",
+    "typescript": "^5.2.2"
   }
 }

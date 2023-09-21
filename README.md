@@ -68,9 +68,7 @@ This project adheres to the Contributor Covenant [code of conduct](http://contri
 
 ## Contact
 
-Avraam Mavridis : [@avraamakis](https://twitter.com/avraamakis)
-
-Eric Clemmons : [@ericclemmons](https://twitter.com/ericclemmons)
+huoyuxin
 
 ## Releases
 
@@ -101,4 +99,4 @@ Eric Clemmons : [@ericclemmons](https://twitter.com/ericclemmons)
 
 MIT
 
-[![Bitdeli Badge](https://d2weczhvl823v0.cloudfront.net/AvraamMavridis/short-selector/trend.png)](https://bitdeli.com/free "Bitdeli Badge")
+[![Bitdeli Badge](https://d2weczhvl823v0.cloudfront.net/AvraamMavridis/short-selector/trend.png)](https://bitdeli.com/free 'Bitdeli Badge')
