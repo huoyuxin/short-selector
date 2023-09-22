@@ -189,14 +189,15 @@ function unique(el, options: Option) {
   const types = selectorTypes;
   const allSelectors: string[] = [];
 
+  // todo: 子元素有全局唯一选择器，无需叠加
   // 循环顺序：父 -> 子
   for (let i = parents.length - 1; i >= 0; i--) {
     const el = parents[i];
     console.log("[short selector]", "el", el);
     const selector = getUniqueSelector(allSelectors, el, types, attributes, excludeRegex);
-    // 取不到目标元素上 parent 下唯一的选择器，直接返回
+    // 取不到目标元素上 parent 下唯一的选择器，进入下一层循环
     if (i === parents.length - 1 && !selector) {
-      break;
+      continue;
     }
     allSelectors.push(selector);
   }
