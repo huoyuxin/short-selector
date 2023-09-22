@@ -1,6 +1,6 @@
 {
   "name": "short-selector",
-  "version": "1.0.0-beta.0",
+  "version": "1.0.0",
   "description": "Given a DOM node, return a unique CSS selector matching only that element",
   "main": "lib/index.js",
   "files": [
@@ -10,7 +10,7 @@
     "test": "test"
   },
   "scripts": {
-    "build": "tsc --build tsconfig.json",
+    "build": "rm -rf lib && tsc --build tsconfig.json",
     "start": "tsc --build ./tsconfig.json -w",
     "ready": "npm set registry https://registry.npmjs.org/; npm run build; npm version patch; npm publish"
   },
