@@ -1,6 +1,6 @@
 {
   "name": "short-selector",
-  "version": "0.5.18",
+  "version": "1.0.0-beta.0",
   "description": "Given a DOM node, return a unique CSS selector matching only that element",
   "main": "lib/index.js",
   "files": [
